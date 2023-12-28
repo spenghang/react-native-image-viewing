@@ -24,7 +24,6 @@ import StatusBarManager from "./components/StatusBarManager"
 import useAnimatedComponents from "./hooks/useAnimatedComponents"
 import useImageIndexChange from "./hooks/useImageIndexChange"
 import { ImageSource } from "./@types"
-import { flexStyles } from '../../utils/style.util'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 type Props = {
@@ -106,7 +105,13 @@ function ImageViewing(props: Props) {
                   imageIndex: currentImageIndex,
                 })
             ) : (
-                <View style={ { ...flexStyles.flexCenter, height: 40, top: useSafeAreaInsets().top } }>
+                <View style={ {
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: 40,
+                  top: useSafeAreaInsets().top
+                } }>
                   <Text style={ {
                     color: '#fff',
                     fontSize: 16,
