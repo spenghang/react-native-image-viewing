@@ -1,27 +1,16 @@
-import { useEffect } from "react";
+import { useEffect } from "react"
 import {
-  Platform,
-  ModalProps,
-  StatusBar,
-} from "react-native";
+    StatusBar,
+} from "react-native"
 
-const StatusBarManager = ({
-  presentationStyle,
-}: {
-  presentationStyle?: ModalProps["presentationStyle"];
-}) => {
-  if (Platform.OS === "ios" || presentationStyle !== "overFullScreen") {
-    return null;
-  }
+const StatusBarManager = () => {
+    StatusBar.setBarStyle('light-content')
 
-  //Can't get an actual state of app status bar with default RN. Gonna rely on "presentationStyle === overFullScreen" prop and guess application status bar state to be visible in this case.
-  StatusBar.setHidden(true);
+    useEffect(() => {
+        return () => StatusBar.setBarStyle('dark-content')
+    }, [])
 
-  useEffect(() => {
-    return () => StatusBar.setHidden(false);
-  }, []);
+    return null
+}
 
-  return null;
-};
-
-export default StatusBarManager;
+export default StatusBarManager

@@ -6,392 +6,407 @@
  *
  */
 
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef } from "react"
 import {
-  Animated,
-  Dimensions,
-  GestureResponderEvent,
-  GestureResponderHandlers,
-  NativeTouchEvent,
-  PanResponderGestureState,
-} from "react-native";
+    Animated,
+    Dimensions,
+    GestureResponderEvent,
+    GestureResponderHandlers,
+    NativeTouchEvent,
+    PanResponderGestureState,
+} from "react-native"
 
-import { Position } from "../@types";
+import { Position } from "../@types"
 import {
-  createPanResponder,
-  getDistanceBetweenTouches,
-  getImageTranslate,
-  getImageDimensionsByTranslate,
-} from "../utils";
+    createPanResponder,
+    getDistanceBetweenTouches,
+    getImageTranslate,
+    getImageDimensionsByTranslate,
+} from "../utils"
 
-const SCREEN = Dimensions.get("window");
-const SCREEN_WIDTH = SCREEN.width;
-const SCREEN_HEIGHT = SCREEN.height;
-const MIN_DIMENSION = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT);
+const SCREEN = Dimensions.get("window")
+const WINDOW_WIDTH = SCREEN.width
+const SCREEN_HEIGHT = SCREEN.height
+const MIN_DIMENSION = Math.min(WINDOW_WIDTH, SCREEN_HEIGHT)
 
-const SCALE_MAX = 2;
-const DOUBLE_TAP_DELAY = 300;
-const OUT_BOUND_MULTIPLIER = 0.75;
+const SCALE_MAX = 2
+const DOUBLE_TAP_DELAY = 200
+const OUT_BOUND_MULTIPLIER = 0.75
 
 type Props = {
-  initialScale: number;
-  initialTranslate: Position;
-  onZoom: (isZoomed: boolean) => void;
-  doubleTapToZoomEnabled: boolean;
-  onLongPress: () => void;
-  delayLongPress: number;
+    initialScale: number;
+    initialTranslate: Position;
+    onZoom: (isZoomed: boolean) => void;
+    doubleTapToZoomEnabled: boolean;
+    onLongPress: () => void;
+    delayLongPress: number;
+    onRequestClose: () => void;
 };
 
-const usePanResponder = ({
-  initialScale,
-  initialTranslate,
-  onZoom,
-  doubleTapToZoomEnabled,
-  onLongPress,
-  delayLongPress,
-}: Props): Readonly<
-  [GestureResponderHandlers, Animated.Value, Animated.ValueXY]
-> => {
-  let numberInitialTouches = 1;
-  let initialTouches: NativeTouchEvent[] = [];
-  let currentScale = initialScale;
-  let currentTranslate = initialTranslate;
-  let tmpScale = 0;
-  let tmpTranslate: Position | null = null;
-  let isDoubleTapPerformed = false;
-  let lastTapTS: number | null = null;
-  let longPressHandlerRef: number | null = null;
+const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Animated.Value, Animated.ValueXY]> => {
+    let {
+        initialScale,
+        initialTranslate,
+        onZoom,
+        doubleTapToZoomEnabled,
+        onLongPress,
+        delayLongPress,
+        onRequestClose
+    } = props
 
-  const meaningfulShift = MIN_DIMENSION * 0.01;
-  const scaleValue = new Animated.Value(initialScale);
-  const translateValue = new Animated.ValueXY(initialTranslate);
+    let numberInitialTouches = 1
+    let initialTouches: NativeTouchEvent[] = []
+    let currentScale = initialScale
+    let currentTranslate = initialTranslate
+    let tmpScale = 0
+    let tmpTranslate: Position | null = null
+    let isDoubleTapPerformed = false
+    let lastTapTS: number | null = null
+    let longPressHandlerRef: any | null = null
+    let singlePressHandlerRef: any | null = null
 
-  const imageDimensions = getImageDimensionsByTranslate(
-    initialTranslate,
-    SCREEN
-  );
+    const meaningfulShift = MIN_DIMENSION * 0.01
+    const scaleValue = new Animated.Value(initialScale)
+    const translateValue = new Animated.ValueXY(initialTranslate)
 
-  const getBounds = (scale: number) => {
-    const scaledImageDimensions = {
-      width: imageDimensions.width * scale,
-      height: imageDimensions.height * scale,
-    };
-    const translateDelta = getImageTranslate(scaledImageDimensions, SCREEN);
+    const imageDimensions = getImageDimensionsByTranslate(
+        initialTranslate,
+        SCREEN
+    )
 
-    const left = initialTranslate.x - translateDelta.x;
-    const right = left - (scaledImageDimensions.width - SCREEN.width);
-    const top = initialTranslate.y - translateDelta.y;
-    const bottom = top - (scaledImageDimensions.height - SCREEN.height);
+    const getBounds = (scale: number) => {
+        const scaledImageDimensions = {
+            width: imageDimensions.width * scale,
+            height: imageDimensions.height * scale,
+        }
+        const translateDelta = getImageTranslate(scaledImageDimensions, SCREEN)
 
-    return [top, left, bottom, right];
-  };
+        const left = initialTranslate.x - translateDelta.x
+        const right = left - (scaledImageDimensions.width - SCREEN.width)
+        const top = initialTranslate.y - translateDelta.y
+        const bottom = top - (scaledImageDimensions.height - SCREEN.height)
 
-  const getTranslateInBounds = (translate: Position, scale: number) => {
-    const inBoundTranslate = { x: translate.x, y: translate.y };
-    const [topBound, leftBound, bottomBound, rightBound] = getBounds(scale);
-
-    if (translate.x > leftBound) {
-      inBoundTranslate.x = leftBound;
-    } else if (translate.x < rightBound) {
-      inBoundTranslate.x = rightBound;
+        return [top, left, bottom, right]
     }
 
-    if (translate.y > topBound) {
-      inBoundTranslate.y = topBound;
-    } else if (translate.y < bottomBound) {
-      inBoundTranslate.y = bottomBound;
+    const getTranslateInBounds = (translate: Position, scale: number) => {
+        const inBoundTranslate = { x: translate.x, y: translate.y }
+        const [topBound, leftBound, bottomBound, rightBound] = getBounds(scale)
+
+        if (translate.x > leftBound) {
+            inBoundTranslate.x = leftBound
+        } else if (translate.x < rightBound) {
+            inBoundTranslate.x = rightBound
+        }
+
+        if (translate.y > topBound) {
+            inBoundTranslate.y = topBound
+        } else if (translate.y < bottomBound) {
+            inBoundTranslate.y = bottomBound
+        }
+
+        return inBoundTranslate
     }
 
-    return inBoundTranslate;
-  };
+    const fitsScreenByWidth = () =>
+        imageDimensions.width * currentScale < WINDOW_WIDTH
+    const fitsScreenByHeight = () =>
+        imageDimensions.height * currentScale < SCREEN_HEIGHT
 
-  const fitsScreenByWidth = () =>
-    imageDimensions.width * currentScale < SCREEN_WIDTH;
-  const fitsScreenByHeight = () =>
-    imageDimensions.height * currentScale < SCREEN_HEIGHT;
+    useEffect(() => {
+        scaleValue.addListener(({ value }) => {
+            if (typeof onZoom === "function") {
+                onZoom(value !== initialScale)
+            }
+        })
 
-  useEffect(() => {
-    scaleValue.addListener(({ value }) => {
-      if (typeof onZoom === "function") {
-        onZoom(value !== initialScale);
-      }
-    });
+        return () => scaleValue.removeAllListeners()
+    })
 
-    return () => scaleValue.removeAllListeners();
-  });
+    const cancelLongPressHandle = () => {
+        longPressHandlerRef && clearTimeout(longPressHandlerRef)
+    }
 
-  const cancelLongPressHandle = () => {
-    longPressHandlerRef && clearTimeout(longPressHandlerRef);
-  };
+    const cancelSinglePressHandle = () => {
+        singlePressHandlerRef && clearTimeout(singlePressHandlerRef)
+        singlePressHandlerRef = null
+    }
 
-  const handlers = {
-    onGrant: (
-      _: GestureResponderEvent,
-      gestureState: PanResponderGestureState
-    ) => {
-      numberInitialTouches = gestureState.numberActiveTouches;
+    const handlers = {
+        onGrant: (
+            _: GestureResponderEvent,
+            gestureState: PanResponderGestureState
+        ) => {
+            numberInitialTouches = gestureState.numberActiveTouches
 
-      if (gestureState.numberActiveTouches > 1) return;
+            if (gestureState.numberActiveTouches > 1) return
 
-      longPressHandlerRef = setTimeout(onLongPress, delayLongPress);
-    },
-    onStart: (
-      event: GestureResponderEvent,
-      gestureState: PanResponderGestureState
-    ) => {
-      initialTouches = event.nativeEvent.touches;
-      numberInitialTouches = gestureState.numberActiveTouches;
+            longPressHandlerRef = setTimeout(onLongPress, delayLongPress)
+        },
+        onStart: (
+            event: GestureResponderEvent,
+            gestureState: PanResponderGestureState
+        ) => {
+            initialTouches = event.nativeEvent.touches
+            numberInitialTouches = gestureState.numberActiveTouches
 
-      if (gestureState.numberActiveTouches > 1) return;
+            if (gestureState.numberActiveTouches > 1) return
 
-      const tapTS = Date.now();
-      // Handle double tap event by calculating diff between first and second taps timestamps
+            const tapTS = Date.now()
+            // Handle double tap event by calculating diff between first and second taps timestamps
 
-      isDoubleTapPerformed = Boolean(
-        lastTapTS && tapTS - lastTapTS < DOUBLE_TAP_DELAY
-      );
+            isDoubleTapPerformed = Boolean(
+                lastTapTS && tapTS - lastTapTS < DOUBLE_TAP_DELAY
+            )
 
-      if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
-        const isScaled = currentTranslate.x !== initialTranslate.x; // currentScale !== initialScale;
-        const { pageX: touchX, pageY: touchY } = event.nativeEvent.touches[0];
-        const targetScale = SCALE_MAX;
-        const nextScale = isScaled ? initialScale : targetScale;
-        const nextTranslate = isScaled
-          ? initialTranslate
-          : getTranslateInBounds(
-              {
-                x:
-                  initialTranslate.x +
-                  (SCREEN_WIDTH / 2 - touchX) * (targetScale / currentScale),
-                y:
-                  initialTranslate.y +
-                  (SCREEN_HEIGHT / 2 - touchY) * (targetScale / currentScale),
-              },
-              targetScale
-            );
+            if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
+                cancelSinglePressHandle()
 
-        onZoom(!isScaled);
+                const isScaled = currentTranslate.x !== initialTranslate.x // currentScale !== initialScale;
+                const { pageX: touchX, pageY: touchY } = event.nativeEvent.touches[0]
+                const targetScale = SCALE_MAX
+                const nextScale = isScaled ? initialScale : targetScale
+                const nextTranslate = isScaled
+                    ? initialTranslate
+                    : getTranslateInBounds(
+                        {
+                            x:
+                                initialTranslate.x +
+                                (WINDOW_WIDTH / 2 - touchX) * (targetScale / currentScale),
+                            y:
+                                initialTranslate.y +
+                                (SCREEN_HEIGHT / 2 - touchY) * (targetScale / currentScale),
+                        },
+                        targetScale
+                    )
 
-        Animated.parallel(
-          [
-            Animated.timing(translateValue.x, {
-              toValue: nextTranslate.x,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(translateValue.y, {
-              toValue: nextTranslate.y,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(scaleValue, {
-              toValue: nextScale,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ],
-          { stopTogether: false }
-        ).start(() => {
-          currentScale = nextScale;
-          currentTranslate = nextTranslate;
-        });
+                onZoom(!isScaled)
 
-        lastTapTS = null;
-      } else {
-        lastTapTS = Date.now();
-      }
-    },
-    onMove: (
-      event: GestureResponderEvent,
-      gestureState: PanResponderGestureState
-    ) => {
-      const { dx, dy } = gestureState;
+                Animated.parallel(
+                    [
+                        Animated.timing(translateValue.x, {
+                            toValue: nextTranslate.x,
+                            duration: 300,
+                            useNativeDriver: true,
+                        }),
+                        Animated.timing(translateValue.y, {
+                            toValue: nextTranslate.y,
+                            duration: 300,
+                            useNativeDriver: true,
+                        }),
+                        Animated.timing(scaleValue, {
+                            toValue: nextScale,
+                            duration: 300,
+                            useNativeDriver: true,
+                        }),
+                    ],
+                    { stopTogether: false }
+                ).start(() => {
+                    currentScale = nextScale
+                    currentTranslate = nextTranslate
+                })
 
-      if (Math.abs(dx) >= meaningfulShift || Math.abs(dy) >= meaningfulShift) {
-        cancelLongPressHandle();
-      }
+                lastTapTS = null
+            } else {
+                lastTapTS = Date.now()
+                singlePressHandlerRef = setTimeout(() => {
+                    onRequestClose()
+                }, DOUBLE_TAP_DELAY + 20)
+            }
+        },
+        onMove: (
+            event: GestureResponderEvent,
+            gestureState: PanResponderGestureState
+        ) => {
+            cancelSinglePressHandle()
 
-      // Don't need to handle move because double tap in progress (was handled in onStart)
-      if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
-        cancelLongPressHandle();
-        return;
-      }
+            const { dx, dy } = gestureState
 
-      if (
-        numberInitialTouches === 1 &&
-        gestureState.numberActiveTouches === 2
-      ) {
-        numberInitialTouches = 2;
-        initialTouches = event.nativeEvent.touches;
-      }
+            if (Math.abs(dx) >= meaningfulShift || Math.abs(dy) >= meaningfulShift) {
+                cancelLongPressHandle()
+            }
 
-      const isTapGesture =
-        numberInitialTouches == 1 && gestureState.numberActiveTouches === 1;
-      const isPinchGesture =
-        numberInitialTouches === 2 && gestureState.numberActiveTouches === 2;
+            // Don't need to handle move because double tap in progress (was handled in onStart)
+            if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
+                cancelLongPressHandle()
+                return
+            }
 
-      if (isPinchGesture) {
-        cancelLongPressHandle();
+            if (
+                numberInitialTouches === 1 &&
+                gestureState.numberActiveTouches === 2
+            ) {
+                numberInitialTouches = 2
+                initialTouches = event.nativeEvent.touches
+            }
 
-        const initialDistance = getDistanceBetweenTouches(initialTouches);
-        const currentDistance = getDistanceBetweenTouches(
-          event.nativeEvent.touches
-        );
+            const isTapGesture =
+                numberInitialTouches == 1 && gestureState.numberActiveTouches === 1
+            const isPinchGesture =
+                numberInitialTouches === 2 && gestureState.numberActiveTouches === 2
 
-        let nextScale = (currentDistance / initialDistance) * currentScale;
+            if (isPinchGesture) {
+                cancelLongPressHandle()
 
-        /**
-         * In case image is scaling smaller than initial size ->
-         * slow down this transition by applying OUT_BOUND_MULTIPLIER
-         */
-        if (nextScale < initialScale) {
-          nextScale =
-            nextScale + (initialScale - nextScale) * OUT_BOUND_MULTIPLIER;
-        }
+                const initialDistance = getDistanceBetweenTouches(initialTouches)
+                const currentDistance = getDistanceBetweenTouches(
+                    event.nativeEvent.touches
+                )
 
-        /**
-         * In case image is scaling down -> move it in direction of initial position
-         */
-        if (currentScale > initialScale && currentScale > nextScale) {
-          const k = (currentScale - initialScale) / (currentScale - nextScale);
+                let nextScale = (currentDistance / initialDistance) * currentScale
 
-          const nextTranslateX =
-            nextScale < initialScale
-              ? initialTranslate.x
-              : currentTranslate.x -
-                (currentTranslate.x - initialTranslate.x) / k;
+                /**
+                 * In case image is scaling smaller than initial size ->
+                 * slow down this transition by applying OUT_BOUND_MULTIPLIER
+                 */
+                if (nextScale < initialScale) {
+                    nextScale =
+                        nextScale + (initialScale - nextScale) * OUT_BOUND_MULTIPLIER
+                }
 
-          const nextTranslateY =
-            nextScale < initialScale
-              ? initialTranslate.y
-              : currentTranslate.y -
-                (currentTranslate.y - initialTranslate.y) / k;
+                /**
+                 * In case image is scaling down -> move it in direction of initial position
+                 */
+                if (currentScale > initialScale && currentScale > nextScale) {
+                    const k = (currentScale - initialScale) / (currentScale - nextScale)
 
-          translateValue.x.setValue(nextTranslateX);
-          translateValue.y.setValue(nextTranslateY);
+                    const nextTranslateX =
+                        nextScale < initialScale
+                            ? initialTranslate.x
+                            : currentTranslate.x -
+                            (currentTranslate.x - initialTranslate.x) / k
 
-          tmpTranslate = { x: nextTranslateX, y: nextTranslateY };
-        }
+                    const nextTranslateY =
+                        nextScale < initialScale
+                            ? initialTranslate.y
+                            : currentTranslate.y -
+                            (currentTranslate.y - initialTranslate.y) / k
 
-        scaleValue.setValue(nextScale);
-        tmpScale = nextScale;
-      }
+                    translateValue.x.setValue(nextTranslateX)
+                    translateValue.y.setValue(nextTranslateY)
 
-      if (isTapGesture && currentScale > initialScale) {
-        const { x, y } = currentTranslate;
-        const { dx, dy } = gestureState;
-        const [topBound, leftBound, bottomBound, rightBound] = getBounds(
-          currentScale
-        );
+                    tmpTranslate = { x: nextTranslateX, y: nextTranslateY }
+                }
 
-        let nextTranslateX = x + dx;
-        let nextTranslateY = y + dy;
+                scaleValue.setValue(nextScale)
+                tmpScale = nextScale
+            }
 
-        if (nextTranslateX > leftBound) {
-          nextTranslateX =
-            nextTranslateX -
-            (nextTranslateX - leftBound) * OUT_BOUND_MULTIPLIER;
-        }
+            if (isTapGesture && currentScale > initialScale) {
+                const { x, y } = currentTranslate
+                const { dx, dy } = gestureState
+                const [topBound, leftBound, bottomBound, rightBound] = getBounds(
+                    currentScale
+                )
 
-        if (nextTranslateX < rightBound) {
-          nextTranslateX =
-            nextTranslateX -
-            (nextTranslateX - rightBound) * OUT_BOUND_MULTIPLIER;
-        }
+                let nextTranslateX = x + dx
+                let nextTranslateY = y + dy
 
-        if (nextTranslateY > topBound) {
-          nextTranslateY =
-            nextTranslateY - (nextTranslateY - topBound) * OUT_BOUND_MULTIPLIER;
-        }
+                if (nextTranslateX > leftBound) {
+                    nextTranslateX =
+                        nextTranslateX -
+                        (nextTranslateX - leftBound) * OUT_BOUND_MULTIPLIER
+                }
 
-        if (nextTranslateY < bottomBound) {
-          nextTranslateY =
-            nextTranslateY -
-            (nextTranslateY - bottomBound) * OUT_BOUND_MULTIPLIER;
-        }
+                if (nextTranslateX < rightBound) {
+                    nextTranslateX =
+                        nextTranslateX -
+                        (nextTranslateX - rightBound) * OUT_BOUND_MULTIPLIER
+                }
 
-        if (fitsScreenByWidth()) {
-          nextTranslateX = x;
-        }
+                if (nextTranslateY > topBound) {
+                    nextTranslateY =
+                        nextTranslateY - (nextTranslateY - topBound) * OUT_BOUND_MULTIPLIER
+                }
 
-        if (fitsScreenByHeight()) {
-          nextTranslateY = y;
-        }
+                if (nextTranslateY < bottomBound) {
+                    nextTranslateY =
+                        nextTranslateY -
+                        (nextTranslateY - bottomBound) * OUT_BOUND_MULTIPLIER
+                }
 
-        translateValue.x.setValue(nextTranslateX);
-        translateValue.y.setValue(nextTranslateY);
+                if (fitsScreenByWidth()) {
+                    nextTranslateX = x
+                }
 
-        tmpTranslate = { x: nextTranslateX, y: nextTranslateY };
-      }
-    },
-    onRelease: () => {
-      cancelLongPressHandle();
+                if (fitsScreenByHeight()) {
+                    nextTranslateY = y
+                }
 
-      if (isDoubleTapPerformed) {
-        isDoubleTapPerformed = false;
-      }
+                translateValue.x.setValue(nextTranslateX)
+                translateValue.y.setValue(nextTranslateY)
 
-      if (tmpScale > 0) {
-        if (tmpScale < initialScale || tmpScale > SCALE_MAX) {
-          tmpScale = tmpScale < initialScale ? initialScale : SCALE_MAX;
-          Animated.timing(scaleValue, {
-            toValue: tmpScale,
-            duration: 100,
-            useNativeDriver: true,
-          }).start();
-        }
+                tmpTranslate = { x: nextTranslateX, y: nextTranslateY }
+            }
+        },
+        onRelease: () => {
+            cancelLongPressHandle()
 
-        currentScale = tmpScale;
-        tmpScale = 0;
-      }
+            if (isDoubleTapPerformed) {
+                isDoubleTapPerformed = false
+            }
 
-      if (tmpTranslate) {
-        const { x, y } = tmpTranslate;
-        const [topBound, leftBound, bottomBound, rightBound] = getBounds(
-          currentScale
-        );
+            if (tmpScale > 0) {
+                if (tmpScale < initialScale || tmpScale > SCALE_MAX) {
+                    tmpScale = tmpScale < initialScale ? initialScale : SCALE_MAX
+                    Animated.timing(scaleValue, {
+                        toValue: tmpScale,
+                        duration: 100,
+                        useNativeDriver: true,
+                    }).start()
+                }
 
-        let nextTranslateX = x;
-        let nextTranslateY = y;
+                currentScale = tmpScale
+                tmpScale = 0
+            }
 
-        if (!fitsScreenByWidth()) {
-          if (nextTranslateX > leftBound) {
-            nextTranslateX = leftBound;
-          } else if (nextTranslateX < rightBound) {
-            nextTranslateX = rightBound;
-          }
-        }
+            if (tmpTranslate) {
+                const { x, y } = tmpTranslate
+                const [topBound, leftBound, bottomBound, rightBound] = getBounds(
+                    currentScale
+                )
 
-        if (!fitsScreenByHeight()) {
-          if (nextTranslateY > topBound) {
-            nextTranslateY = topBound;
-          } else if (nextTranslateY < bottomBound) {
-            nextTranslateY = bottomBound;
-          }
-        }
+                let nextTranslateX = x
+                let nextTranslateY = y
 
-        Animated.parallel([
-          Animated.timing(translateValue.x, {
-            toValue: nextTranslateX,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateValue.y, {
-            toValue: nextTranslateY,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-        ]).start();
+                if (!fitsScreenByWidth()) {
+                    if (nextTranslateX > leftBound) {
+                        nextTranslateX = leftBound
+                    } else if (nextTranslateX < rightBound) {
+                        nextTranslateX = rightBound
+                    }
+                }
 
-        currentTranslate = { x: nextTranslateX, y: nextTranslateY };
-        tmpTranslate = null;
-      }
-    },
-  };
+                if (!fitsScreenByHeight()) {
+                    if (nextTranslateY > topBound) {
+                        nextTranslateY = topBound
+                    } else if (nextTranslateY < bottomBound) {
+                        nextTranslateY = bottomBound
+                    }
+                }
 
-  const panResponder = useMemo(() => createPanResponder(handlers), [handlers]);
+                Animated.parallel([
+                    Animated.timing(translateValue.x, {
+                        toValue: nextTranslateX,
+                        duration: 100,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(translateValue.y, {
+                        toValue: nextTranslateY,
+                        duration: 100,
+                        useNativeDriver: true,
+                    }),
+                ]).start()
 
-  return [panResponder.panHandlers, scaleValue, translateValue];
-};
+                currentTranslate = { x: nextTranslateX, y: nextTranslateY }
+                tmpTranslate = null
+            }
+        },
+    }
 
-export default usePanResponder;
+    const panResponder = useMemo(() => createPanResponder(handlers), [handlers])
+
+    return [panResponder.panHandlers, scaleValue, translateValue]
+}
+
+export default usePanResponder
