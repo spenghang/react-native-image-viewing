@@ -133,91 +133,17 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
     }
 
     const handlers = {
-        onGrant: (
-            _: GestureResponderEvent,
-            gestureState: PanResponderGestureState
-        ) => {
+        onGrant: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
             numberInitialTouches = gestureState.numberActiveTouches
 
             if (gestureState.numberActiveTouches > 1) return
 
             longPressHandlerRef = setTimeout(onLongPress, delayLongPress)
         },
-        onStart: (
-            event: GestureResponderEvent,
-            gestureState: PanResponderGestureState
-        ) => {
-            initialTouches = event.nativeEvent.touches
-            numberInitialTouches = gestureState.numberActiveTouches
+        onStart: (event: GestureResponderEvent, gestureState: PanResponderGestureState) => {
 
-            if (gestureState.numberActiveTouches > 1) return
-
-            const tapTS = Date.now()
-            // Handle double tap event by calculating diff between first and second taps timestamps
-
-            isDoubleTapPerformed = Boolean(
-                lastTapTS && tapTS - lastTapTS < DOUBLE_TAP_DELAY
-            )
-
-            if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
-                cancelSinglePressHandle()
-
-                const isScaled = currentTranslate.x !== initialTranslate.x // currentScale !== initialScale;
-                const { pageX: touchX, pageY: touchY } = event.nativeEvent.touches[0]
-                const targetScale = SCALE_MAX
-                const nextScale = isScaled ? initialScale : targetScale
-                const nextTranslate = isScaled
-                    ? initialTranslate
-                    : getTranslateInBounds(
-                        {
-                            x:
-                                initialTranslate.x +
-                                (WINDOW_WIDTH / 2 - touchX) * (targetScale / currentScale),
-                            y:
-                                initialTranslate.y +
-                                (SCREEN_HEIGHT / 2 - touchY) * (targetScale / currentScale),
-                        },
-                        targetScale
-                    )
-
-                onZoom(!isScaled)
-
-                Animated.parallel(
-                    [
-                        Animated.timing(translateValue.x, {
-                            toValue: nextTranslate.x,
-                            duration: 300,
-                            useNativeDriver: true,
-                        }),
-                        Animated.timing(translateValue.y, {
-                            toValue: nextTranslate.y,
-                            duration: 300,
-                            useNativeDriver: true,
-                        }),
-                        Animated.timing(scaleValue, {
-                            toValue: nextScale,
-                            duration: 300,
-                            useNativeDriver: true,
-                        }),
-                    ],
-                    { stopTogether: false }
-                ).start(() => {
-                    currentScale = nextScale
-                    currentTranslate = nextTranslate
-                })
-
-                lastTapTS = null
-            } else {
-                lastTapTS = Date.now()
-                // singlePressHandlerRef = setTimeout(() => {
-                //     onRequestClose()
-                // }, DOUBLE_TAP_DELAY + 20)
-            }
         },
-        onMove: (
-            event: GestureResponderEvent,
-            gestureState: PanResponderGestureState
-        ) => {
+        onMove: (event: GestureResponderEvent, gestureState: PanResponderGestureState) => {
             cancelSinglePressHandle()
 
             const { dx, dy } = gestureState
@@ -339,7 +265,7 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
                 tmpTranslate = { x: nextTranslateX, y: nextTranslateY }
             }
         },
-        onRelease: () => {
+        onRelease: (event: GestureResponderEvent, gestureState: PanResponderGestureState) => {
             cancelLongPressHandle()
 
             if (isDoubleTapPerformed) {
@@ -400,6 +326,71 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
 
                 currentTranslate = { x: nextTranslateX, y: nextTranslateY }
                 tmpTranslate = null
+            }
+
+            initialTouches = event.nativeEvent.touches
+            numberInitialTouches = gestureState.numberActiveTouches
+
+            if (gestureState.numberActiveTouches > 1) return
+
+            const tapTS = Date.now()
+            // Handle double tap event by calculating diff between first and second taps timestamps
+
+            isDoubleTapPerformed = Boolean(lastTapTS && tapTS - lastTapTS < DOUBLE_TAP_DELAY)
+
+            if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
+                cancelSinglePressHandle()
+
+                const isScaled = currentTranslate.x !== initialTranslate.x // currentScale !== initialScale;
+                const { pageX: touchX, pageY: touchY } = event.nativeEvent.touches[0]
+                const targetScale = SCALE_MAX
+                const nextScale = isScaled ? initialScale : targetScale
+                const nextTranslate = isScaled
+                    ? initialTranslate
+                    : getTranslateInBounds(
+                        {
+                            x:
+                                initialTranslate.x +
+                                (WINDOW_WIDTH / 2 - touchX) * (targetScale / currentScale),
+                            y:
+                                initialTranslate.y +
+                                (SCREEN_HEIGHT / 2 - touchY) * (targetScale / currentScale),
+                        },
+                        targetScale
+                    )
+
+                onZoom(!isScaled)
+
+                Animated.parallel(
+                    [
+                        Animated.timing(translateValue.x, {
+                            toValue: nextTranslate.x,
+                            duration: 300,
+                            useNativeDriver: true,
+                        }),
+                        Animated.timing(translateValue.y, {
+                            toValue: nextTranslate.y,
+                            duration: 300,
+                            useNativeDriver: true,
+                        }),
+                        Animated.timing(scaleValue, {
+                            toValue: nextScale,
+                            duration: 300,
+                            useNativeDriver: true,
+                        }),
+                    ],
+                    { stopTogether: false }
+                ).start(() => {
+                    currentScale = nextScale
+                    currentTranslate = nextTranslate
+                })
+
+                lastTapTS = null
+            } else {
+                lastTapTS = Date.now()
+                // singlePressHandlerRef = setTimeout(() => {
+                //     onRequestClose()
+                // }, DOUBLE_TAP_DELAY + 20)
             }
         },
     }
