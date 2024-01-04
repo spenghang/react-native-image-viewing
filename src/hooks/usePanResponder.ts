@@ -56,6 +56,8 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
 
     let numberInitialTouches = 1
     let initialTouches: NativeTouchEvent[] = []
+    let isTapGesture = false
+    let isPinchGesture = false
     let currentScale = initialScale
     let currentTranslate = initialTranslate
     let tmpScale = 0
@@ -231,10 +233,8 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
                 initialTouches = event.nativeEvent.touches
             }
 
-            const isTapGesture =
-                numberInitialTouches == 1 && gestureState.numberActiveTouches === 1
-            const isPinchGesture =
-                numberInitialTouches === 2 && gestureState.numberActiveTouches === 2
+            isTapGesture = numberInitialTouches == 1 && gestureState.numberActiveTouches === 1
+            isPinchGesture = numberInitialTouches === 2 && gestureState.numberActiveTouches === 2
 
             if (isPinchGesture) {
                 cancelLongPressHandle()
@@ -330,10 +330,9 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
                 tmpTranslate = { x: nextTranslateX, y: nextTranslateY }
             }
         },
-        onRelease: (event: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+        onRelease: () => {
             cancelLongPressHandle()
 
-            const isTapGesture = numberInitialTouches == 1 && gestureState.numberActiveTouches === 1
             if (isTapGesture && !(doubleTapToZoomEnabled && isDoubleTapPerformed) && !isLongPressPerformed) {
                 singlePressHandlerRef = setTimeout(() => {
                     onRequestClose()
@@ -344,9 +343,9 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
                 isDoubleTapPerformed = false
             }
 
-            if (isLongPressPerformed) {
-                isLongPressPerformed = false
-            }
+            isLongPressPerformed = false
+            isTapGesture = false
+            isPinchGesture = false
 
             if (tmpScale > 0) {
                 if (tmpScale < initialScale || tmpScale > SCALE_MAX) {
