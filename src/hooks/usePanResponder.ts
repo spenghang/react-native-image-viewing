@@ -153,6 +153,8 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
 
             if (gestureState.numberActiveTouches > 1) return
 
+            isTapGesture = true
+
             const tapTS = Date.now()
             // Handle double tap event by calculating diff between first and second taps timestamps
 
