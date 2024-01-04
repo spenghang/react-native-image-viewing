@@ -63,6 +63,7 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
     let isDoubleTapPerformed = false
     let lastTapTS: number | null = null
     let longPressHandlerRef: any | null = null
+    let isLongPressPerformed = false
     let singlePressHandlerRef: any | null = null
 
     const meaningfulShift = MIN_DIMENSION * 0.01
@@ -139,6 +140,7 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
             if (gestureState.numberActiveTouches > 1) return
 
             longPressHandlerRef = setTimeout(() => {
+                isLongPressPerformed = true
                 onLongPress()
                 cancelSinglePressHandle()
             }, delayLongPress)
@@ -328,10 +330,11 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
                 tmpTranslate = { x: nextTranslateX, y: nextTranslateY }
             }
         },
-        onRelease: () => {
+        onRelease: (event: GestureResponderEvent, gestureState: PanResponderGestureState) => {
             cancelLongPressHandle()
 
-            if (!doubleTapToZoomEnabled || !isDoubleTapPerformed) {
+            const isTapGesture = numberInitialTouches == 1 && gestureState.numberActiveTouches === 1
+            if (isTapGesture && !(doubleTapToZoomEnabled && isDoubleTapPerformed) && !isLongPressPerformed) {
                 singlePressHandlerRef = setTimeout(() => {
                     onRequestClose()
                 }, DOUBLE_TAP_DELAY + 20)
@@ -339,6 +342,10 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
 
             if (isDoubleTapPerformed) {
                 isDoubleTapPerformed = false
+            }
+
+            if (isLongPressPerformed) {
+                isLongPressPerformed = false
             }
 
             if (tmpScale > 0) {
