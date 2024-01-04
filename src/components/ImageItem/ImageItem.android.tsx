@@ -134,10 +134,7 @@ const ImageItem = ({
                 onScrollEndDrag,
             }) }
         >
-            <TouchableWithoutFeedback
-                onPress={ onRequestClose }
-                onLongPress={ onLongPressHandler }
-                delayLongPress={ delayLongPress }>
+            <TouchableWithoutFeedback onPress={ onRequestClose }>
                 <View>
                     <Animated.Image
                         { ...panHandlers }

@@ -127,7 +127,9 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
     })
 
     const cancelLongPressHandle = () => {
+        console.log('cancelLongPressHandle')
         longPressHandlerRef && clearTimeout(longPressHandlerRef)
+        longPressHandlerRef = null
     }
 
     const cancelSinglePressHandle = () => {
@@ -141,7 +143,9 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
 
             if (gestureState.numberActiveTouches > 1) return
 
+            console.log('longPressHandlerRef')
             longPressHandlerRef = setTimeout(() => {
+                console.log('onLongPress')
                 isLongPressPerformed = true
                 onLongPress()
                 cancelSinglePressHandle()
