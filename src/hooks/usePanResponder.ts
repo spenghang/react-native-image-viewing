@@ -138,7 +138,10 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
 
             if (gestureState.numberActiveTouches > 1) return
 
-            longPressHandlerRef = setTimeout(onLongPress, delayLongPress)
+            longPressHandlerRef = setTimeout(() => {
+                onLongPress()
+                cancelSinglePressHandle()
+            }, delayLongPress)
         },
         onStart: (event: GestureResponderEvent, gestureState: PanResponderGestureState) => {
 
@@ -388,9 +391,9 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
                 lastTapTS = null
             } else {
                 lastTapTS = Date.now()
-                // singlePressHandlerRef = setTimeout(() => {
-                //     onRequestClose()
-                // }, DOUBLE_TAP_DELAY + 20)
+                singlePressHandlerRef = setTimeout(() => {
+                    onRequestClose()
+                }, DOUBLE_TAP_DELAY + 20)
             }
         },
     }
