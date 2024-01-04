@@ -209,9 +209,9 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
                 lastTapTS = null
             } else {
                 lastTapTS = Date.now()
-                singlePressHandlerRef = setTimeout(() => {
-                    onRequestClose()
-                }, DOUBLE_TAP_DELAY + 20)
+                // singlePressHandlerRef = setTimeout(() => {
+                //     onRequestClose()
+                // }, DOUBLE_TAP_DELAY + 20)
             }
         },
         onMove: (
