@@ -139,7 +139,10 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
         onGrant: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
             numberInitialTouches = gestureState.numberActiveTouches
 
-            if (gestureState.numberActiveTouches > 1) return
+            if (gestureState.numberActiveTouches > 1) {
+                cancelLongPressHandle()
+                return
+            }
 
             longPressHandlerRef = setTimeout(() => {
                 isLongPressPerformed = true
