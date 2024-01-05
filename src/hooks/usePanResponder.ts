@@ -65,12 +65,13 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
     let isDoubleTapPerformed = false
     let lastTapTS: number | null = null
     let longPressHandlerRef: any | null = null
-    let isLongPressPerformed = false
     let singlePressHandlerRef: any | null = null
 
     const meaningfulShift = MIN_DIMENSION * 0.01
     const scaleValue = new Animated.Value(initialScale)
     const translateValue = new Animated.ValueXY(initialTranslate)
+
+    const isLongPressPerformed = useRef(false)
 
     const imageDimensions = getImageDimensionsByTranslate(
         initialTranslate,
@@ -139,11 +140,10 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
     const handlers = {
         onGrant: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
             numberInitialTouches = gestureState.numberActiveTouches
-
             if (gestureState.numberActiveTouches > 1) return
 
             longPressHandlerRef = setTimeout(() => {
-                isLongPressPerformed = true
+                isLongPressPerformed.current = true
                 onLongPress()
                 cancelSinglePressHandle()
             }, delayLongPress)
@@ -215,7 +215,6 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
         },
         onMove: (event: GestureResponderEvent, gestureState: PanResponderGestureState) => {
             cancelSinglePressHandle()
-            cancelLongPressHandle()
 
             const { dx, dy } = gestureState
 
@@ -337,7 +336,7 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
         onRelease: () => {
             cancelLongPressHandle()
 
-            if (isTapGesture && !(doubleTapToZoomEnabled && isDoubleTapPerformed) && !isLongPressPerformed) {
+            if (isTapGesture && !(doubleTapToZoomEnabled && isDoubleTapPerformed) && !isLongPressPerformed.current) {
                 singlePressHandlerRef = setTimeout(() => {
                     onRequestClose()
                 }, DOUBLE_TAP_DELAY + 20)
@@ -347,7 +346,7 @@ const usePanResponder = (props: Props): Readonly<[GestureResponderHandlers, Anim
                 isDoubleTapPerformed = false
             }
 
-            isLongPressPerformed = false
+            isLongPressPerformed.current = false
             isTapGesture = false
             isPinchGesture = false
 
