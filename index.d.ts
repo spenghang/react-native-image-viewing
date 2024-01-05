@@ -1,6 +1,6 @@
 import { ImageSource } from './src/@types'
 import { ModalProps } from 'react-native'
-import { ComponentType, Component } from 'react'
+import React, { ComponentType, Component } from 'react'
 
 declare module 'react-native-image-viewing' {
 
@@ -11,6 +11,7 @@ declare module 'react-native-image-viewing' {
         visible: boolean;
         onRequestClose: () => void;
         onLongPress?: (image: ImageSource) => void;
+        longPressActionSheet?: React.ReactNode;
         onImageIndexChange?: (imageIndex: number) => void;
         presentationStyle?: ModalProps["presentationStyle"];
         animationType?: ModalProps["animationType"];
