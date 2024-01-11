@@ -1,6 +1,6 @@
 {
     "name": "react-native-image-viewing",
-    "version": "phv1.8",
+    "version": "1.8.0",
     "description": "React Native modal component for viewing images as a sliding gallery",
     "main": "index.js",
     "types": "index.d.ts",
