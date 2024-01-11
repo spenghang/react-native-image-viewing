@@ -1,5 +1,5 @@
 import { ImageSource } from './src/@types'
-import { ModalProps } from 'react-native'
+import { ModalProps, StatusBarStyle } from 'react-native'
 import React, { ComponentType, Component } from 'react'
 
 declare module 'react-native-image-viewing' {
@@ -21,6 +21,7 @@ declare module 'react-native-image-viewing' {
         delayLongPress?: number;
         HeaderComponent?: ComponentType<{ imageIndex: number }>;
         FooterComponent?: ComponentType<{ imageIndex: number }>;
+        originalStatusBarStyle?: StatusBarStyle
     };
 
     export default class ImageViewing extends Component<Props, any> {

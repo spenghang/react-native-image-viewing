@@ -15,7 +15,7 @@ import {
     VirtualizedList,
     ModalProps,
     Modal,
-    Text,
+    Text, StatusBarStyle,
 } from "react-native"
 
 import ImageItem from "./components/ImageItem/ImageItem"
@@ -43,6 +43,7 @@ type Props = {
     delayLongPress?: number;
     HeaderComponent?: ComponentType<{ imageIndex: number }>;
     FooterComponent?: ComponentType<{ imageIndex: number }>;
+    originalStatusBarStyle?: StatusBarStyle
 };
 
 const DEFAULT_ANIMATION_TYPE = "fade"
@@ -69,6 +70,7 @@ function ImageViewing(props: Props) {
         delayLongPress = DEFAULT_DELAY_LONG_PRESS,
         HeaderComponent,
         FooterComponent,
+        originalStatusBarStyle,
     } = props
 
     const imageList = useRef<VirtualizedList<ImageSource>>(null)
@@ -97,7 +99,7 @@ function ImageViewing(props: Props) {
             onRequestClose={ onRequestClose }
             supportedOrientations={ ["portrait"] }
             hardwareAccelerated>
-            <StatusBarManager/>
+            <StatusBarManager originalStatusBarStyle={ originalStatusBarStyle }/>
 
             <View style={ [styles.container, { backgroundColor }] }>
 
